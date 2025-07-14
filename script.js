@@ -17,24 +17,20 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 async function unlockAudioContext() {
   if (audioCtx.state === 'suspended') {
     await audioCtx.resume();
-    console.log("AudioContext resumed on user interaction");
-  } else {
-    console.log("AudioContext already running");
+    console.log("AudioContext resumed");
   }
 }
 
-// รองรับ pointerdown และ touchstart เพื่อให้แน่ใจว่าบน iOS ก็ resume ได้
-window.addEventListener('pointerdown', unlockAudioContext, { once: true });
-window.addEventListener('touchstart', unlockAudioContext, { once: true });
+window.addEventListener('touchstart', unlockAudioContext, { once: true, passive: true });
+window.addEventListener('pointerdown', unlockAudioContext, { once: true, passive: true });
+window.addEventListener('click', unlockAudioContext, { once: true, passive: true });
 
 // ปุ่มเล่นเสียง
 document.getElementById('btn-speak').addEventListener('click', async () => {
-  if (audioCtx.state === 'suspended') {
-    await audioCtx.resume();
-    console.log("AudioContext resumed on play button");
-  }
+  await unlockAudioContext();
   playMetronomeAndSpeak();
 });
+
 
 const audioCache = {};
 
@@ -286,28 +282,33 @@ async function loadSoundBuffer(url) {
 }
 
 async function preloadAllAudio() {
-    const words = ["หนึ่ง", "สอง", "สาม", "สี่", "อิ", "และ", "อะ", "ติ"];
-    const clicks = { "click-1": "audio/click1.mp3", "click-other": "audio/click.mp3" };
+  const words = ["หนึ่ง", "สอง", "สาม", "สี่", "อิ", "และ", "อะ", "ติ"];
+  const clicks = { "click-1": "audio/click1.mp3", "click-other": "audio/click.mp3" };
 
-    for (const word of words) {
-        const buffer = await loadSoundBuffer(`audio/${word}.mp3`);
-        audioCache[word] = buffer;
-    }
-    for (const id in clicks) {
-        const buffer = await loadSoundBuffer(clicks[id]);
-        audioCache[id] = buffer;
-    }
+  for (const word of words) {
+    const buffer = await loadSoundBuffer(`audio/${word}.mp3`);
+    audioCache[word] = buffer;
+    console.log(`Loaded buffer for ${word}`);
+  }
+  for (const id in clicks) {
+    const buffer = await loadSoundBuffer(clicks[id]);
+    audioCache[id] = buffer;
+    console.log(`Loaded buffer for ${id}`);
+  }
 }
 
-// เล่นเสียงแบบแม่นยำด้วย AudioBuffer
 function playBuffer(name, time) {
-    const buffer = audioCache[name];
-    if (!buffer) return;
+  const buffer = audioCache[name];
+  if (!buffer) {
+    console.warn(`No audio buffer for ${name}`);
+    return;
+  }
 
-    const source = audioCtx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioCtx.destination);
-    source.start(time);
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  source.start(time);
+  console.log(`Playing buffer ${name} at ${time}`);
 }
 
 function playAudioWordAt(word, whenTime) {
