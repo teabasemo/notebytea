@@ -272,99 +272,87 @@ function loadAudioSamples() {
 }
 
 function playAudioWordAt(word, whenTime) {
-    fetch(`audio/${word}.mp3`)
-        .then(res => res.arrayBuffer())
-        .then(buf => audioCtx.decodeAudioData(buf))
-        .then(decoded => {
-            const source = audioCtx.createBufferSource();
-            source.buffer = decoded;
-            source.connect(audioCtx.destination);
-            source.start(whenTime);
-        });
+  const audio = document.getElementById(word);
+  if (audio) {
+    setTimeout(() => {
+      audio.currentTime = 0;
+      audio.play().catch(() => {}); // กัน error บางกรณี
+    }, (whenTime - audioCtx.currentTime) * 1000);
+  }
 }
 
-function playClick(time, isStrong = false) {
-  const file = isStrong ? 'click1.mp3' : 'click.mp3';
-  fetch(`audio/${file}`)
-    .then(res => res.arrayBuffer())
-    .then(buf => audioCtx.decodeAudioData(buf))
-    .then(decoded => {
-      const source = audioCtx.createBufferSource();
-      source.buffer = decoded;
-      source.connect(audioCtx.destination);
-      source.start(time);
-    });
+function playClick(time, isBeatOne = false) {
+  const id = isBeatOne ? 'click-1' : 'click-other';
+  const audio = document.getElementById(id);
+  if (audio) {
+    setTimeout(() => {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }, (time - audioCtx.currentTime) * 1000);
+  }
 }
-
-
 
 async function playMetronomeAndSpeak() {
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
-    await loadAudioSamples();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
 
-    const beatNames = ["หนึ่ง", "สอง", "สาม", "สี่"];
-    const countInBeats = 4; // นับนำเข้า 4 จังหวะ
-    const startTime = audioCtx.currentTime + 0.5;
-    let currentTime = startTime;
+  const beatNames = ["หนึ่ง", "สอง", "สาม", "สี่"];
+  const countInBeats = 4;
+  const startTime = audioCtx.currentTime + 0.5;
+  let currentTime = startTime;
 
-    // 🔊 นับนำเข้า
-    for (let i = 0; i < countInBeats; i++) {
-        const clickTime = startTime + (i * beatDuration) / 1000;
-        const isStrong = i % 4 === 0;
-        playClick(clickTime, isStrong);
+  // 🔊 นับนำเข้า
+  for (let i = 0; i < countInBeats; i++) {
+    const t = startTime + (i * beatDuration) / 1000;
+    playClick(t, i % 4 === 0); // beat 1 ใช้ click-1
+  }
+
+  // 🎶 เริ่มหลัง count-in
+  const notesStartTime = startTime + (countInBeats * beatDuration) / 1000;
+  currentTime = notesStartTime;
+  let totalBeat = 0;
+
+  const totalBeats = notesData.reduce((sum, n) => sum + getNoteDuration(n.duration), 0);
+
+  for (let i = 0; i < Math.floor(totalBeats); i++) {
+    const t = notesStartTime + (i * beatDuration) / 1000;
+    playClick(t, i % 4 === 0);
+  }
+
+  for (let i = 0; i < notesData.length; i++) {
+    const note = notesData[i];
+    const dur = getNoteDuration(note.duration);
+
+    if (isRest(note.duration)) {
+      totalBeat += dur;
+      currentTime += (beatDuration * dur) / 1000;
+      continue;
     }
 
-    const notesStartTime = startTime + (countInBeats * beatDuration) / 1000;
-    currentTime = notesStartTime;
-    let totalBeat = 0;
-
-    const totalBeats = notesData.reduce((sum, n) => sum + getNoteDuration(n.duration), 0);
-
-    // 🔔 คลิกพร้อมโน้ต
-    for (let i = 0; i < Math.floor(totalBeats); i++) {
-        const time = notesStartTime + (i * beatDuration) / 1000;
-        const isStrong = i % 4 === 0;
-        playClick(time, isStrong);
+    const prevTied = i > 0 ? notesData[i - 1].tied : false;
+    if (note.tied === false && prevTied === true) {
+      totalBeat += dur;
+      currentTime += (beatDuration * dur) / 1000;
+      continue;
     }
 
-    // 🔉 อ่านโน้ต
-    for (let i = 0; i < notesData.length; i++) {
-        const note = notesData[i];
-        const dur = getNoteDuration(note.duration);
+    const positionInBeat = totalBeat % 1;
+    const rounded = Math.round(positionInBeat * 100) / 100;
+    const beatIndex = Math.floor(totalBeat) % 4;
 
-        if (isRest(note.duration)) {
-            totalBeat += dur;
-            currentTime += (beatDuration * dur) / 1000;
-            continue;
-        }
+    const map = {
+      0: beatNames[beatIndex],
+      0.25: "อิ",
+      0.5: "และ",
+      0.75: "อะ"
+    };
 
-        const prevTied = i > 0 ? notesData[i - 1].tied : false;
-        if (note.tied === false && prevTied === true) {
-            totalBeat += dur;
-            currentTime += (beatDuration * dur) / 1000;
-            continue;
-        }
+    const word = map[rounded] || "ติ";
+    playAudioWordAt(word, currentTime);
 
-        const positionInBeat = totalBeat % 1;
-        const rounded = Math.round(positionInBeat * 100) / 100;
-        const beatIndex = Math.floor(totalBeat) % 4;
-
-        const map = {
-            0: beatNames[beatIndex],
-            0.25: "อิ",
-            0.5: "และ",
-            0.75: "อะ"
-        };
-
-        const word = map[rounded] || "ติ";
-        playAudioWordAt(word, currentTime);
-
-        totalBeat += dur;
-        currentTime += (beatDuration * dur) / 1000;
-    }
+    totalBeat += dur;
+    currentTime += (beatDuration * dur) / 1000;
+  }
 }
-
-
 
 // UI event binding
 const noteButtons = document.querySelectorAll(".note-btn");
@@ -387,8 +375,11 @@ document.getElementById('btn-clear').addEventListener('click', () => {
     redrawScore();
 });
 
-document.getElementById('btn-speak').addEventListener('click', () => {
-    playMetronomeAndSpeak();
+document.getElementById('btn-speak').addEventListener('click', async () => {
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+  playMetronomeAndSpeak();
 });
 
 document.querySelector('.note-btn[data-duration="q"]').classList.add('selected');
