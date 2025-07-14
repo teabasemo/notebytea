@@ -306,10 +306,16 @@ function playBuffer(name, time) {
 
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
-  source.connect(audioCtx.destination);
+
+  // ✅ เพิ่ม GainNode (ช่วยให้ Safari ไม่ตัดเสียง)
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = 1;
+  source.connect(gainNode).connect(audioCtx.destination);
+
   source.start(time);
   console.log(`Playing buffer ${name} at ${time}`);
 }
+
 
 function playAudioWordAt(word, whenTime) {
     playBuffer(word, whenTime);
