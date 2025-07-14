@@ -1,69 +1,108 @@
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  margin: 20px;
-  background: #f9f9f9;
-  color: #333;
-  user-select: none;
+  font-family: 'TH Sarabun New', sans-serif;
+  margin: 0;
+  background: #f0f2f5;
+  padding: 0;
 }
 
-h2 {
-  margin-bottom: 5px;
-  color: #222;
+header {
+  background: linear-gradient(to right, #4CAF50, #2e7d32);
+  color: white;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-p {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #555;
+main {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
 }
 
 #toolbar {
-  background: #fff;
-  padding: 15px 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-  max-width: 600px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
   margin-bottom: 20px;
-  user-select: none;
 }
 
-#toolbar strong {
-  font-size: 1.1em;
-  margin-bottom: 8px;
-  display: inline-block;
-  color: #444;
+h2 {
+  font-size: 28px;
+  margin-bottom: 5px;
 }
 
-#toolbar button {
-  font-size: 14px;
-  padding: 8px 14px;
-  margin: 4px 6px 8px 0;
+p {
+  font-size: 16px;
+  color: #fefefe;
+  margin-bottom: 10px;
+}
+
+.note-btn,
+#btn-delete,
+#btn-clear,
+#btn-speak {
+  margin: 5px 5px 5px 0;
+  padding: 10px 15px;
+  font-size: 16px;
   border: none;
-  border-radius: 5px;
-  background-color: #eee;
+  border-radius: 8px;
+  background-color: #e0e0e0;
   color: #333;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s;
 }
 
-#toolbar button:hover {
-  background-color: #ddd;
+.note-btn:hover,
+#btn-delete:hover,
+#btn-clear:hover,
+#btn-speak:hover {
+  background-color: #d5d5d5;
 }
 
-#toolbar button.selected {
-  background-color: #4caf50;
+.note-btn.selected {
+  background-color: #4CAF50;
   color: white;
-  font-weight: 600;
 }
 
-#score {
-  background-color: white;
-  border: 1px solid #ccc;
+#btn-speak {
+  background-color: #2196F3;
+  color: white;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 15px 0;
+}
+
+#score-container {
+  background: #ffffff;
   padding: 15px;
   border-radius: 10px;
-  min-height: 160px;
-  max-width: 1000px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.05);
-  user-select: none;
+  border: 1px solid #ccc;
+  overflow-x: auto;
+}
+
+#score svg {
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 600px) {
+  .note-btn,
+  #btn-delete,
+  #btn-clear,
+  #btn-speak {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+}
+.note-btn {
+  margin: 4px;
+  padding: 8px 12px;
+  font-size: 16px;
+}
+.note-btn.selected {
+  background-color: #66ccff;
 }
