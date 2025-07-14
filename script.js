@@ -13,6 +13,26 @@ const BPM = 60;
 const beatDuration = 60000 / BPM;
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+async function unlockAudioContext() {
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+    console.log("AudioContext resumed on user interaction");
+  }
+}
+// รองรับ pointerdown และ touchstart เพื่อให้แน่ใจว่าบน iOS ก็ resume ได้
+window.addEventListener('pointerdown', unlockAudioContext, { once: true });
+window.addEventListener('touchstart', unlockAudioContext, { once: true });
+
+// ปุ่มเล่นเสียง
+document.getElementById('btn-speak').addEventListener('click', async () => {
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+    console.log("AudioContext resumed on play button");
+  }
+  playMetronomeAndSpeak();
+});
+
 const audioCache = {};
 
 function getNoteDuration(duration) {
@@ -179,9 +199,6 @@ function redrawScore() {
                 noteCounter++;
             });
 
-
-
-
             const staveNotes = tickables.filter(t => t instanceof StaveNote);
             const beams = Beam.generateBeams(staveNotes.filter(n => !isRest(n.duration)));
 
@@ -258,18 +275,6 @@ function addNoteByDuration(duration) {
     redrawScore();
 }
 
-function loadAudioSamples() {
-    const words = ["หนึ่ง", "สอง", "สาม", "สี่", "อิ", "และ", "อะ", "ติ"];
-    return Promise.all(
-        words.map(word =>
-            new Promise(resolve => {
-                const audio = new Audio(`audio/${word}.mp3`);
-                audioCache[word] = audio;
-                audio.addEventListener("canplaythrough", resolve, { once: true });
-            })
-        )
-    );
-}
 // โหลดเสียงเป็น buffer
 async function loadSoundBuffer(url) {
     const response = await fetch(url);
@@ -395,15 +400,9 @@ document.getElementById('btn-clear').addEventListener('click', () => {
     redrawScore();
 });
 
-document.getElementById('btn-speak').addEventListener('click', async () => {
-    if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-    }
-    playMetronomeAndSpeak();
-});
-
 document.querySelector('.note-btn[data-duration="q"]').classList.add('selected');
 redrawScore();
+
 window.addEventListener('load', async () => {
     await preloadAllAudio(); // โหลดเสียงก่อนใช้งาน
     redrawScore();
