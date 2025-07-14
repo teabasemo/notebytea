@@ -18,8 +18,11 @@ async function unlockAudioContext() {
   if (audioCtx.state === 'suspended') {
     await audioCtx.resume();
     console.log("AudioContext resumed on user interaction");
+  } else {
+    console.log("AudioContext already running");
   }
 }
+
 // รองรับ pointerdown และ touchstart เพื่อให้แน่ใจว่าบน iOS ก็ resume ได้
 window.addEventListener('pointerdown', unlockAudioContext, { once: true });
 window.addEventListener('touchstart', unlockAudioContext, { once: true });
