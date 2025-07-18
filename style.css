@@ -1,10 +1,66 @@
-body {
-  font-family: 'TH Sarabun New', sans-serif;
+/* ป้องกันการซูมและเลือกข้อความโดยไม่ตั้งใจบนมือถือ */
+html, body {
+  touch-action: manipulation; /* ป้องกัน pinch-zoom, double-tap zoom */
+  -webkit-text-size-adjust: 100%; /* ป้องกันขนาดฟอนต์เปลี่ยนอัตโนมัติ */
+  -ms-touch-action: manipulation;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* ป้องกันเมนูกดค้างบน iOS */
   margin: 0;
-  background: #f0f2f5;
   padding: 0;
+  font-family: "TH Sarabun New", sans-serif;
 }
 
+* {
+  -webkit-tap-highlight-color: transparent; /* ปิด highlight เวลากดบนมือถือ */
+}
+#tempo-range {
+  width: 100%;
+  margin-top: 10px;
+}
+#tempo-label {
+  font-weight: bold;
+}
+
+/* ปุ่มโน้ตและปุ่มต่าง ๆ */
+.note-btn,
+#btn-delete,
+#btn-clear,
+#btn-speak {
+  margin: 5px 5px 5px 0;
+  padding: 10px 15px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #e0e0e0;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  touch-action: manipulation; /* ป้องกัน gesture ที่ไม่ต้องการ */
+  user-select: none;
+}
+
+.note-btn:hover,
+#btn-delete:hover,
+#btn-clear:hover,
+#btn-speak:hover {
+  background-color: #d5d5d5;
+}
+
+.note-btn.selected {
+  background-color: #4CAF50;
+  color: white;
+}
+
+/* ปุ่มเล่นเสียง */
+#btn-speak {
+  background-color: #2196F3;
+  color: white;
+}
+
+/* Layout และสไตล์ส่วนอื่น ๆ */
 header {
   background: linear-gradient(to right, #4CAF50, #2e7d32);
   color: white;
@@ -34,40 +90,8 @@ h2 {
 
 p {
   font-size: 16px;
-  color: #fefefe;
-  margin-bottom: 10px;
-}
-
-.note-btn,
-#btn-delete,
-#btn-clear,
-#btn-speak {
-  margin: 5px 5px 5px 0;
-  padding: 10px 15px;
-  font-size: 16px;
-  border: none;
-  border-radius: 8px;
-  background-color: #e0e0e0;
   color: #333;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.note-btn:hover,
-#btn-delete:hover,
-#btn-clear:hover,
-#btn-speak:hover {
-  background-color: #d5d5d5;
-}
-
-.note-btn.selected {
-  background-color: #4CAF50;
-  color: white;
-}
-
-#btn-speak {
-  background-color: #2196F3;
-  color: white;
+  margin-bottom: 10px;
 }
 
 hr {
@@ -89,6 +113,7 @@ hr {
   height: auto;
 }
 
+/* Responsive สำหรับมือถือ */
 @media (max-width: 600px) {
   .note-btn,
   #btn-delete,
@@ -98,11 +123,8 @@ hr {
     padding: 8px 12px;
   }
 }
-.note-btn {
-  margin: 4px;
-  padding: 8px 12px;
-  font-size: 16px;
-}
+
+/* ปรับสีปุ่ม selected */
 .note-btn.selected {
   background-color: #66ccff;
 }
