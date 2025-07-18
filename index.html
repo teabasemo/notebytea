@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#ffffff">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>โปรแกรมเขียนโน้ตจังหวะพร้อมเสียง Metronome</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=TH+Sarabun+New&display=swap" rel="stylesheet">
@@ -13,7 +14,7 @@
 <body>
   <header>
     <h2>โปรแกรมเขียนโน้ตจังหวะ 🎵</h2>
-    <p>เลือกชนิดโน้ต/ตัวหยุด แล้วคลิกบนพื้นที่ด้านล่างเพื่อวางโน้ต</p>
+    <p>เลือกชนิดโน้ต/ตัวหยุด แล้วคลิกเล่นเสียงเพื่อฝึกท่อง</p>
   </header>
 
   <main>
@@ -35,7 +36,9 @@
       <hr />
       <strong>เครื่องมือ:</strong><br />
       <button id="btn-delete">ลบโน้ตล่าสุด</button>
-      <button id="btn-clear">ล้างทั้งหมด</button>
+      <button id="btn-clear">ล้างทั้งหมด</button><br />
+      <label for="tempo-range">Tempo: <span id="tempo-label">60</span> BPM</label>
+      <input type="range" id="tempo-range" min="30" max="240" value="60" step="1" style="width: 100%;">
     </div>
 
     <div id="score-container">
