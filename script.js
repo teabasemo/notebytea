@@ -9,16 +9,16 @@ const beatValue = 4;
 let notesData = [];
 let selectedDuration = "q";
 
-const BPM = 60;
-const beatDuration = 60000 / BPM;
+let BPM = 60;
+let beatDuration = 60 / BPM;
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 async function unlockAudioContext() {
-  if (audioCtx.state === 'suspended') {
-    await audioCtx.resume();
-    console.log("AudioContext resumed");
-  }
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+        console.log("AudioContext resumed");
+    }
 }
 
 window.addEventListener('touchstart', unlockAudioContext, { once: true, passive: true });
@@ -27,10 +27,9 @@ window.addEventListener('click', unlockAudioContext, { once: true, passive: true
 
 // ปุ่มเล่นเสียง
 document.getElementById('btn-speak').addEventListener('click', async () => {
-  await unlockAudioContext();
-  playMetronomeAndSpeak();
+    await unlockAudioContext();
+    playMetronomeAndSpeak();
 });
-
 
 const audioCache = {};
 
@@ -59,6 +58,14 @@ function isRest(duration) {
     return duration.includes('r');
 }
 
+function snapTo16th(val) {
+    const snap = [0, 0.25, 0.5, 0.75];
+    let closest = snap.reduce((prev, curr) =>
+        Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
+    );
+    return closest;
+}
+
 function estimateMeasureWidth(measureNotes) {
     const totalBeats = measureNotes.reduce((sum, n) => sum + getNoteDuration(n.duration), 0);
     const baseWidth = totalBeats * 50;
@@ -75,7 +82,6 @@ function redrawScore() {
     const marginX = 10;
     const marginY = 20;
 
-    // แบ่ง notesData เป็น measures ตาม beatsPerMeasure
     const measures = [];
     let currentMeasure = [];
     let currentBeats = 0;
@@ -92,10 +98,8 @@ function redrawScore() {
     });
     if (currentMeasure.length > 0) measures.push(currentMeasure);
 
-    // ลบ vexNote เก่า
     notesData.forEach(n => delete n.vexNote);
 
-    // แบ่ง measures เป็น lines ตาม container width
     let lines = [[]];
     let currentLineWidth = 0;
     const maxLineWidth = containerWidth - marginX * 2;
@@ -131,7 +135,7 @@ function redrawScore() {
 
                 const beatInMeasure = Math.floor(beatCountBefore % 4);
                 const positionInBeat = beatCountBefore % 1;
-                const rounded = Math.round(positionInBeat * 100) / 100;
+                const rounded = snapTo16th(positionInBeat); // ✅ FIXED
 
                 const note = new StaveNote({
                     keys: [rest ? "b/4" : "a/4"],
@@ -142,17 +146,13 @@ function redrawScore() {
                 let text = "";
 
                 if (rest) {
-                    // ตัวหยุด
                     if (durBeats === 4) {
                         text = "ย1 2 3 4";
                     } else if (durBeats === 2) {
                         const start = beatInMeasure + 1;
                         const end = start + 1;
-                        if (end <= 4) {
-                            text = `ย${start} ${end}`;
-                        } else {
-                            text = `ย${start}`;
-                        }
+                        if (end <= 4) text = `ย${start} ${end}`;
+                        else text = `ย${start}`;
                     } else {
                         const restMap = {
                             0: "ย1",
@@ -163,17 +163,13 @@ function redrawScore() {
                         text = restMap[rounded] || "ยติ";
                     }
                 } else {
-                    // ตัวโน้ต
                     if (durBeats === 4) {
                         text = "1 2 3 4";
                     } else if (durBeats === 2) {
                         const start = beatInMeasure + 1;
                         const end = start + 1;
-                        if (end <= 4) {
-                            text = `${start} ${end}`;
-                        } else {
-                            text = `${start}`;
-                        }
+                        if (end <= 4) text = `${start} ${end}`;
+                        else text = `${start}`;
                     } else {
                         const map = {
                             0: ["1", "2", "3", "4"][beatInMeasure],
@@ -274,7 +270,6 @@ function addNoteByDuration(duration) {
     redrawScore();
 }
 
-// โหลดเสียงเป็น buffer
 async function loadSoundBuffer(url) {
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
@@ -282,40 +277,30 @@ async function loadSoundBuffer(url) {
 }
 
 async function preloadAllAudio() {
-  const words = ["หนึ่ง", "สอง", "สาม", "สี่", "อิ", "และ", "อะ", "ติ"];
-  const clicks = { "click-1": "audio/click1.mp3", "click-other": "audio/click.mp3" };
+    const words = ["หนึ่ง", "สอง", "สาม", "สี่", "อิ", "และ", "อะ", "ติ"];
+    const clicks = { "click-1": "audio/click1.mp3", "click-other": "audio/click.mp3" };
 
-  for (const word of words) {
-    const buffer = await loadSoundBuffer(`audio/${word}.mp3`);
-    audioCache[word] = buffer;
-    console.log(`Loaded buffer for ${word}`);
-  }
-  for (const id in clicks) {
-    const buffer = await loadSoundBuffer(clicks[id]);
-    audioCache[id] = buffer;
-    console.log(`Loaded buffer for ${id}`);
-  }
+    for (const word of words) {
+        const buffer = await loadSoundBuffer(`audio/${word}.mp3`);
+        audioCache[word] = buffer;
+    }
+    for (const id in clicks) {
+        const buffer = await loadSoundBuffer(clicks[id]);
+        audioCache[id] = buffer;
+    }
 }
 
 function playBuffer(name, time) {
-  const buffer = audioCache[name];
-  if (!buffer) {
-    console.warn(`No audio buffer for ${name}`);
-    return;
-  }
+    const buffer = audioCache[name];
+    if (!buffer) return;
 
-  const source = audioCtx.createBufferSource();
-  source.buffer = buffer;
-
-  // ✅ เพิ่ม GainNode (ช่วยให้ Safari ไม่ตัดเสียง)
-  const gainNode = audioCtx.createGain();
-  gainNode.gain.value = 1;
-  source.connect(gainNode).connect(audioCtx.destination);
-
-  source.start(time);
-  console.log(`Playing buffer ${name} at ${time}`);
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 1;
+    source.connect(gainNode).connect(audioCtx.destination);
+    source.start(time);
 }
-
 
 function playAudioWordAt(word, whenTime) {
     playBuffer(word, whenTime);
@@ -326,7 +311,6 @@ function playClick(time, isBeatOne = false) {
     playBuffer(name, time);
 }
 
-
 async function playMetronomeAndSpeak() {
     if (audioCtx.state === 'suspended') await audioCtx.resume();
 
@@ -335,21 +319,19 @@ async function playMetronomeAndSpeak() {
     const startTime = audioCtx.currentTime + 0.5;
     let currentTime = startTime;
 
-    // 🔊 นับนำเข้า
     for (let i = 0; i < countInBeats; i++) {
-        const t = startTime + (i * beatDuration) / 1000;
-        playClick(t, i % 4 === 0); // beat 1 ใช้ click-1
+        const t = startTime + (i * beatDuration);
+        playClick(t, i % 4 === 0);
     }
 
-    // 🎶 เริ่มหลัง count-in
-    const notesStartTime = startTime + (countInBeats * beatDuration) / 1000;
+    const notesStartTime = startTime + (countInBeats * beatDuration);
     currentTime = notesStartTime;
     let totalBeat = 0;
 
     const totalBeats = notesData.reduce((sum, n) => sum + getNoteDuration(n.duration), 0);
 
     for (let i = 0; i < Math.floor(totalBeats); i++) {
-        const t = notesStartTime + (i * beatDuration) / 1000;
+        const t = notesStartTime + (i * beatDuration);
         playClick(t, i % 4 === 0);
     }
 
@@ -359,19 +341,19 @@ async function playMetronomeAndSpeak() {
 
         if (isRest(note.duration)) {
             totalBeat += dur;
-            currentTime += (beatDuration * dur) / 1000;
+            currentTime += beatDuration * dur;
             continue;
         }
 
         const prevTied = i > 0 ? notesData[i - 1].tied : false;
         if (note.tied === false && prevTied === true) {
             totalBeat += dur;
-            currentTime += (beatDuration * dur) / 1000;
+            currentTime += beatDuration * dur;
             continue;
         }
 
         const positionInBeat = totalBeat % 1;
-        const rounded = Math.round(positionInBeat * 100) / 100;
+        const rounded = snapTo16th(positionInBeat);
         const beatIndex = Math.floor(totalBeat) % 4;
 
         const map = {
@@ -385,11 +367,11 @@ async function playMetronomeAndSpeak() {
         playAudioWordAt(word, currentTime);
 
         totalBeat += dur;
-        currentTime += (beatDuration * dur) / 1000;
+        currentTime += beatDuration * dur;
     }
 }
 
-// UI event binding
+// UI
 const noteButtons = document.querySelectorAll(".note-btn");
 noteButtons.forEach(btn => {
     btn.addEventListener('pointerdown', () => {
@@ -399,6 +381,13 @@ noteButtons.forEach(btn => {
         addNoteByDuration(selectedDuration);
     });
 });
+
+let lastTouchTime = 0;
+document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - lastTouchTime <= 300) e.preventDefault();
+    lastTouchTime = now;
+}, { passive: false });
 
 document.getElementById('btn-delete').addEventListener('click', () => {
     notesData.pop();
@@ -414,8 +403,17 @@ document.querySelector('.note-btn[data-duration="q"]').classList.add('selected')
 redrawScore();
 
 window.addEventListener('load', async () => {
-    await preloadAllAudio(); // โหลดเสียงก่อนใช้งาน
+    await preloadAllAudio();
     redrawScore();
+});
+
+const tempoSlider = document.getElementById('tempo-range');
+const tempoLabel = document.getElementById('tempo-label');
+
+tempoSlider.addEventListener('input', () => {
+    BPM = parseInt(tempoSlider.value);
+    beatDuration = 60 / BPM;
+    tempoLabel.textContent = BPM;
 });
 
 window.addEventListener('resize', () => {
