@@ -29,11 +29,15 @@ window.addEventListener('click', unlockAudioContext, { once: true, passive: true
 let isPlaying = false;
 
 document.getElementById('btn-speak').addEventListener('click', async () => {
-    if (isPlaying) return; // ถ้ากำลังเล่นอยู่ ให้ข้าม
-    isPlaying = true;
+    if (isPlaying) {
+        // อาจเพิ่มแจ้งเตือน หรือไม่ก็แค่ return ข้ามไปเลย
+        console.log("กำลังเล่นเสียงอยู่ โปรดรอจนกว่าจะเล่นจบ");
+        return;
+    }
+    isPlaying = true;  // บล็อกการกดซ้ำทันที
     await unlockAudioContext();
     await playMetronomeAndSpeak();
-    isPlaying = false;
+    // ไม่ต้องตั้ง isPlaying = false ตรงนี้ เพราะ playMetronomeAndSpeak จะตั้งเองตอนจบ
 });
 
 
@@ -326,6 +330,8 @@ function playClick(time, isBeatOne = false) {
 async function playMetronomeAndSpeak() {
     if (audioCtx.state === 'suspended') await audioCtx.resume();
 
+    isPlaying = true;  // บล็อกการเล่นซ้ำ
+
     const beatNames = ["หนึ่ง", "สอง", "สาม", "สี่"];
     const countInBeats = 4;
     const startTime = audioCtx.currentTime + 0.1; // เวลาที่จะเริ่มเล่น
@@ -354,15 +360,12 @@ async function playMetronomeAndSpeak() {
         const note = notesData[i];
         const dur = getNoteDuration(note.duration);
 
-        // คำนวณเวลาเล่นจริงของโน้ตนี้
         const playTime = currentTime - audioCtx.currentTime;
 
-        // ตั้ง timeout ให้ไฮไลต์โน้ตตามเวลาที่เล่นจริง
         setTimeout(() => {
             highlightNote(i);
         }, playTime * 1000);
 
-        // เล่นเสียงเฉพาะโน้ตที่ไม่ใช่ rest และไม่ใช่โน้ตผูก
         if (!isRest(note.duration)) {
             const prevTied = i > 0 ? notesData[i - 1].tied : false;
             if (!(note.tied === false && prevTied === true)) {
@@ -370,18 +373,18 @@ async function playMetronomeAndSpeak() {
             }
         }
 
-        // เพิ่มเวลา
         totalBeat += dur;
         currentTime += beatDuration * dur;
     }
 
-    // เคลียร์ไฮไลต์หลังเสียงทั้งหมดจบ โดย delay อีกทีตามรวมเวลาทั้งหมด
     const totalDuration = (countInBeats + totalBeats) * beatDuration;
     setTimeout(() => {
         notesData.forEach(n => n.highlight = false);
         redrawScore();
+        isPlaying = false;  // อนุญาตให้กดเล่นใหม่ได้
     }, totalDuration * 1000 + 100);
 }
+
 
 
 // ฟังก์ชัน delay แบบ promise
