@@ -26,10 +26,16 @@ window.addEventListener('pointerdown', unlockAudioContext, { once: true, passive
 window.addEventListener('click', unlockAudioContext, { once: true, passive: true });
 
 // ปุ่มเล่นเสียง
+let isPlaying = false;
+
 document.getElementById('btn-speak').addEventListener('click', async () => {
+    if (isPlaying) return; // ถ้ากำลังเล่นอยู่ ให้ข้าม
+    isPlaying = true;
     await unlockAudioContext();
-    playMetronomeAndSpeak();
+    await playMetronomeAndSpeak();
+    isPlaying = false;
 });
+
 
 const audioCache = {};
 
@@ -143,6 +149,12 @@ function redrawScore() {
                     clef: "treble"
                 });
 
+                // เพิ่มตรงนี้ เพื่อเปลี่ยนสีทั้งโน้ตและโน้ตพักเวลาถูกไฮไลต์
+                if (noteInfo.highlight) {
+                    note.setStyle({ fillStyle: "red", strokeStyle: "red" });
+                }
+
+
                 let text = "";
 
                 if (rest) {
@@ -155,7 +167,7 @@ function redrawScore() {
                         else text = `ย${start}`;
                     } else {
                         const restMap = {
-                            0: "ย1",
+                            0: ["ย1", "ย2", "ย3", "ย4"][beatInMeasure],
                             0.25: "ยe",
                             0.5: "ย&",
                             0.75: "ยa"
@@ -316,9 +328,10 @@ async function playMetronomeAndSpeak() {
 
     const beatNames = ["หนึ่ง", "สอง", "สาม", "สี่"];
     const countInBeats = 4;
-    const startTime = audioCtx.currentTime + 0.5;
+    const startTime = audioCtx.currentTime + 0.1; // เวลาที่จะเริ่มเล่น
     let currentTime = startTime;
 
+    // เล่นเสียงเคาะจังหวะแรก 4 ครั้ง
     for (let i = 0; i < countInBeats; i++) {
         const t = startTime + (i * beatDuration);
         playClick(t, i % 4 === 0);
@@ -330,47 +343,74 @@ async function playMetronomeAndSpeak() {
 
     const totalBeats = notesData.reduce((sum, n) => sum + getNoteDuration(n.duration), 0);
 
+    // เล่นเสียงเคาะหลัง 4 จังหวะ ตามจำนวนโน้ต
     for (let i = 0; i < Math.floor(totalBeats); i++) {
         const t = notesStartTime + (i * beatDuration);
         playClick(t, i % 4 === 0);
     }
 
+    // ไฮไลต์และเล่นเสียงโน้ตทีละตัวแบบไม่บล็อก ใช้ setTimeout
     for (let i = 0; i < notesData.length; i++) {
         const note = notesData[i];
         const dur = getNoteDuration(note.duration);
 
-        if (isRest(note.duration)) {
-            totalBeat += dur;
-            currentTime += beatDuration * dur;
-            continue;
+        // คำนวณเวลาเล่นจริงของโน้ตนี้
+        const playTime = currentTime - audioCtx.currentTime;
+
+        // ตั้ง timeout ให้ไฮไลต์โน้ตตามเวลาที่เล่นจริง
+        setTimeout(() => {
+            highlightNote(i);
+        }, playTime * 1000);
+
+        // เล่นเสียงเฉพาะโน้ตที่ไม่ใช่ rest และไม่ใช่โน้ตผูก
+        if (!isRest(note.duration)) {
+            const prevTied = i > 0 ? notesData[i - 1].tied : false;
+            if (!(note.tied === false && prevTied === true)) {
+                playAudioWordAt(getWordForNoteAtPosition(totalBeat), currentTime);
+            }
         }
 
-        const prevTied = i > 0 ? notesData[i - 1].tied : false;
-        if (note.tied === false && prevTied === true) {
-            totalBeat += dur;
-            currentTime += beatDuration * dur;
-            continue;
-        }
-
-        const positionInBeat = totalBeat % 1;
-        const rounded = snapTo16th(positionInBeat);
-        const beatIndex = Math.floor(totalBeat) % 4;
-
-        const map = {
-            0: beatNames[beatIndex],
-            0.25: "อิ",
-            0.5: "และ",
-            0.75: "อะ"
-        };
-
-        const word = map[rounded] || "ติ";
-        playAudioWordAt(word, currentTime);
-
+        // เพิ่มเวลา
         totalBeat += dur;
         currentTime += beatDuration * dur;
     }
+
+    // เคลียร์ไฮไลต์หลังเสียงทั้งหมดจบ โดย delay อีกทีตามรวมเวลาทั้งหมด
+    const totalDuration = (countInBeats + totalBeats) * beatDuration;
+    setTimeout(() => {
+        notesData.forEach(n => n.highlight = false);
+        redrawScore();
+    }, totalDuration * 1000 + 100);
 }
 
+
+// ฟังก์ชัน delay แบบ promise
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ฟังก์ชันหาคำเสียงตามตำแหน่งโน้ต
+function getWordForNoteAtPosition(totalBeat) {
+    const beatNames = ["หนึ่ง", "สอง", "สาม", "สี่"];
+    const positionInBeat = totalBeat % 1;
+    const rounded = snapTo16th(positionInBeat);
+    const beatIndex = Math.floor(totalBeat) % 4;
+    const map = {
+        0: beatNames[beatIndex],
+        0.25: "อิ",
+        0.5: "และ",
+        0.75: "อะ"
+    };
+    return map[rounded] || "ติ";
+}
+
+// เพิ่มฟังก์ชันสำหรับไฮไลต์โน้ตที่กำลังเล่น
+function highlightNote(index) {
+    notesData.forEach((note, i) => {
+        note.highlight = (i === index);
+    });
+    redrawScore();
+}
 // UI
 const noteButtons = document.querySelectorAll(".note-btn");
 noteButtons.forEach(btn => {
